@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { FaMapMarkerAlt, FaSearch } from "react-icons/fa";
+import { FaMapMarkerAlt, FaSearch, FaBars, FaTimes } from "react-icons/fa";
 import { Link } from "wouter";
 
-// Predefined city list with coordinates
 const cities = [
     { name: "Delhi", lat: 28.6139, lng: 77.2090 },
     { name: "Mumbai", lat: 19.0760, lng: 72.8777 },
@@ -18,6 +17,7 @@ const cities = [
 const Navbar = () => {
     const [selectedCity, setSelectedCity] = useState("Select City");
     const [searchQuery, setSearchQuery] = useState("");
+    const [menuOpen, setMenuOpen] = useState(false);
     const { user, isAuthenticated, isLoading } = useAuth();
 
     const detectLocation = () => {
@@ -53,7 +53,7 @@ const Navbar = () => {
     };
 
     const getDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // Earth radius in km
+        const R = 6371;
         const dLat = (lat2 - lat1) * (Math.PI / 180);
         const dLon = (lon2 - lon1) * (Math.PI / 180);
         const a =
@@ -66,75 +66,96 @@ const Navbar = () => {
         return R * c;
     };
 
+    // Navbar content as a component for reuse
+    const NavbarContent = ({ vertical = false }) => (
+        <div className={`flex ${vertical ? "flex-col gap-4" : "items-center gap-3"} w-full`}>
+            {/* Location Dropdown */}
+            <div className="flex items-center gap-2 border px-3 py-1 rounded-md text-sm">
+                <FaMapMarkerAlt className="text-blue-600" />
+                <select
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="outline-none bg-transparent text-black"
+                >
+                    <option disabled>Select City</option>
+                    {cities.map((city) => (
+                        <option key={city.name} value={city.name}>
+                            {city.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            {/* Detect Location */}
+            <button
+                onClick={detectLocation}
+                className="border px-3 py-1 text-blue-600 rounded-md text-sm hover:bg-blue-50"
+            >
+                Detect
+            </button>
+            {/* Search Bar */}
+            <form
+                className="relative"
+                onSubmit={e => {
+                    e.preventDefault();
+                    if (searchQuery) window.location.href = `/services?search=${encodeURIComponent(searchQuery)}`;
+                }}
+            >
+                <input
+                    type="text"
+                    placeholder="Search services..."
+                    className="pl-8 pr-3 py-1 border rounded-md text-sm w-48"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+                <FaSearch className="absolute left-2 top-2.5 text-gray-500 text-sm" />
+            </form>
+            {/* Auth/Account */}
+            {isLoading ? null : isAuthenticated && user ? (
+                <Link href="/dashboard">
+                    <button className="bg-gray-100 text-blue-700 px-4 py-1.5 rounded-md text-sm font-semibold mt-2 md:mt-0">
+                        {user.name || user.email || "Account"}
+                    </button>
+                </Link>
+            ) : (
+                <Link href="/login">
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm mt-2 md:mt-0">
+                        Sign In
+                    </button>
+                </Link>
+            )}
+        </div>
+    );
+
     return (
-        <nav className="w-full bg-white shadow-sm px-6 py-4">
+        <nav className="w-full px-4 py-2 border-b bg-white">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
                 {/* Logo + Tagline */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center  gap-4">
                     <img src="https://i.ibb.co/ccJNk82/logo.png" alt="SafeHands Logo" className="h-8 w-8 rounded-full" />
                     <div>
                         <h1 className="text-xl font-semibold text-[#1f3c88]">SafeHands</h1>
-                        <p className="text-xs text-[#3571db]">
-                            Trusted Care, Right at Your Doorstep
-                        </p>
+                        <p className="text-xs text-[#3571db]">Trusted Care, Right at Your Doorstep</p>
                     </div>
                 </div>
-
-                {/* Center controls */}
-                <div className="flex items-center gap-3">
-                    {/* Location Dropdown */}
-                    <div className="flex items-center gap-2 border px-3 py-1 rounded-md text-sm">
-                        <FaMapMarkerAlt className="text-blue-600" />
-                        <select
-                            value={selectedCity}
-                            onChange={(e) => setSelectedCity(e.target.value)}
-                            className="outline-none bg-transparent text-black"
-                        >
-                            <option disabled>Select City</option>
-                            {cities.map((city) => (
-                                <option key={city.name} value={city.name}>
-                                    {city.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Detect Location */}
-                    <button
-                        onClick={detectLocation}
-                        className="border px-3 py-1 text-blue-600 rounded-md text-sm hover:bg-blue-50"
-                    >
-                        Detect
-                    </button>
-
-                    {/* Search Bar */}
-                    <form className="relative" onSubmit={e => { e.preventDefault(); if(searchQuery) window.location.href = `/services?search=${encodeURIComponent(searchQuery)}`; }}>
-                        <input
-                            type="text"
-                            placeholder="Search services..."
-                            className="pl-8 pr-3 py-1 border rounded-md text-sm w-48"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                        <FaSearch className="absolute left-2 top-2.5 text-gray-500 text-sm" />
-                    </form>
+                {/* Hamburger menu for mobile */}
+                <button
+                    className="md:hidden ml-auto text-2xl p-2"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    aria-label="Toggle menu"
+                >
+                    {menuOpen ? <FaTimes /> : <FaBars />}
+                </button>
+                {/* Desktop Navbar */}
+                <div className="hidden md:flex items-center gap-3 flex-3">
+                    <NavbarContent />
                 </div>
-
-                {/* Auth/Account */}
-                {isLoading ? null : isAuthenticated && user ? (
-                    <Link href="/dashboard">
-                        <button className="bg-gray-100 text-blue-700 px-4 py-1.5 rounded-md text-sm font-semibold">
-                            {user.name || user.email || "Account"}
-                        </button>
-                    </Link>
-                ) : (
-                    <Link href="/login">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm">
-                            Sign In
-                        </button>
-                    </Link>
-                )}
             </div>
+            {/* Mobile Dropdown */}
+            {menuOpen && (
+                <div className="md:hidden mt-4 bg-white rounded shadow-lg p-4">
+                    <NavbarContent vertical />
+                </div>
+            )}
         </nav>
     );
 };
